@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chat with AI</title>
+  <!-- Load Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Custom font: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Load Chart.js for graphical dashboard -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Apply Inter font family globally */
+    body {
+      font-family: 'Inter', sans-serif;
+      overflow: hidden; /* Prevent body scrollbar when resizing */
+    }
+    /* Hide scrollbar for the chat and prompt history, but allow scrolling */
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+    .scrollbar-hide {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+    .resizer {
+      background-color: #cbd5e1; /* Tailwind gray-300 */
+      position: relative;
+      background-clip: padding-box;
+      user-select: none;
+      transition: background-color 0.2s;
+    }
+    .resizer:hover {
+      background-color: #94a3b8; /* Tailwind gray-400 */
+    }
+    /* Vertical resizer */
+    .resizer.vertical {
+      width: 8px; /* Resizer width */
+      cursor: ew-resize;
+      margin: 0 -4px; /* Extend clickable area */
+    }
+    .resizer.vertical::before {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 100%;
+      background-color: #64748b; /* Tailwind gray-600 */
+      transform: translateX(-50%);
+    }
+    /* Horizontal resizer */
+    .resizer.horizontal {
+      height: 8px; /* Resizer height */
+      cursor: ns-resize;
+      margin: -4px 0; /* Extend clickable area */
+    }
+    .resizer.horizontal::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      height: 2px;
+      width: 100%;
+      background-color: #64748b; /* Tailwind gray-600 */
+      transform: translateY(-50%);
+    }
+  </style>
+</head>
+<body class="flex h-full p-4 gap-4">
+  <!-- Left Panel: Dashboard and Previous Prompts Container -->
+  <div id="left-panel" class="flex flex-col min-w-[300px] h-full overflow-hidden">
+    <!-- Dashboard Section (Top Left) -->
+    <div id="dashboard-section" class="bg-white rounded-xl shadow-lg p-4 overflow-hidden">
+      <h2 class="font-semibold text-xl border-b pb-2 mb-2 text-gray-800">📊 Dashboard</h2>
+      <!-- Container for the chart -->
+      <div class="flex flex-col space-y-2 text-gray-700 h-full">
+        <canvas id="tokenChart" class="w-full h-full"></canvas>
+        <div class="flex justify-between text-sm pt-2">
+            <span class="font-medium text-blue-600">Prompt: <span id="promptTokens">0</span></span>
+            <span class="font-medium text-green-600">Completion: <span id="completionTokens">0</span></span>
+            <span class="font-bold text-purple-600">Total: <span id="totalTokens">0</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Horizontal Resizer -->
+    <div id="horizontal-resizer" class="resizer horizontal flex-none"></div>
+
+    <!-- Previous Prompts Section (Bottom Left) -->
+    <div id="prompts-section" class="bg-white rounded-xl shadow-lg p-4 flex-grow flex flex-col overflow-hidden mt-4 min-h-[150px]">
+      <h2 class="font-semibold text-xl border-b pb-2 mb-2 text-gray-800 flex-none flex justify-between items-center">
+        <span>💬 Previous Prompts</span>
+        <!-- Clear History Button -->
+        <button id="clearHistoryBtn" class="bg-red-100 text-red-600 text-sm px-3 py-1.5 rounded-md hover:bg-red-200 transition-colors">
+          Clear History
+        </button>
+      </h2>
+      <ul id="previousPromptsList" class="flex-grow overflow-y-auto space-y-2 pr-2 scrollbar-hide">
+        <!-- Previous prompts will be loaded here by JavaScript -->
+      </ul>
+    </div>
+  </div>
+
+  <!-- Vertical Resizer -->
+  <div id="vertical-resizer" class="resizer vertical flex-none"></div>
+
+  <!-- Right Half: Chatbot Interface -->
+  <div id="chatbox-section" class="flex flex-col min-w-[300px] h-full bg-white rounded-xl shadow-lg">
+    <header class="p-4 border-b border-gray-200 font-semibold text-xl text-gray-800 flex-none flex justify-between items-center">
+      <span>🤖 AI Chat</span>
+      <div class="flex items-center space-x-2">
+        <label for="modelSelect" class="text-sm font-medium text-gray-700">Model:</label>
+        <select id="modelSelect" class="border border-gray-300 rounded-md p-1.5 text-sm focus:ring-blue-500 focus:border-blue-500 transition-all">
+          <option value="llama3">Llama3 (Ollama)</option>
+          <option value="groq">Groq (Llama3-8b-8192)</option>
+          <option value="openai">OpenAI (GPT-4o-mini)</option>
+          <option value="gemini-flash">Gemini-Flash</option>
+        </select>
+      </div>
+    </header>
+    <main id="chat" class="flex-grow p-4 overflow-y-auto space-y-4 scrollbar-hide">
+  <div class="system-message text-center text-sm text-gray-500 italic p-2 border-b border-gray-200">
+    <!-- Messages inserted here dynamically -->
+  </div>
+  </main>      
+    <form id="chat-form" class="p-4 border-t border-gray-200 flex space-x-3 items-center flex-none">
+      <textarea id="userInput" rows="2" class="flex-grow border border-gray-300 rounded-lg p-3 resize-none focus:ring-blue-500 focus:border-blue-500 transition-all text-gray-700" placeholder="Type your message..."></textarea>
+      <button type="submit" id="sendBtn" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+        Send
+      </button>
+      <!-- Stop Button -->
+      <button type="button" id="stopBtn" class="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-all shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 hidden">
+        Stop
+      </button>
+    </form>
+  </div>
+
+  <!-- Load JavaScript -->
+  <script src="/static/script.js"></script>
+</body>
+</html>
