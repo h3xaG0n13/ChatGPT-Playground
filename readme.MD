@@ -4,7 +4,7 @@ This chatbot is aimed to capture the tokens used for different prompts in differ
 
 ## Pre-requisite
 1. Ensure the python dependencies in requirements.txt have been installed.
-2. For usage of llama3, ollama has to be installed locally. Please use: (https://www.llama.com/llama-downloads/)
+2. For usage of llama3, ollama has to be installed locally. Please use: [llama-download](https://www.llama.com/llama-downloads/)
 3. llama3 model used: phi3. It is a light-weight model that can be hosted locally.
 4. Please ensure you have the api-keys for [OpenAI](https://platform.openai.com/settings/organization/api-keys), [Gemini](https://aistudio.google.com/apikey) and [Gorq](https://console.groq.com/keys) created.
 5. Ensure the keys are captured under the .evn file. You can use the below commands:
